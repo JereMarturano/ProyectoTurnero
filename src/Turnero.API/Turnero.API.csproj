@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Turnero.Core\Turnero.Core.csproj" />
+    <ProjectReference Include="..\Turnero.Application\Turnero.Application.csproj" />
   </ItemGroup>
 
 </Project>
