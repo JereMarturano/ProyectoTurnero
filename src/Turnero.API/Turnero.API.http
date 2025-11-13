@@ -1,0 +1,6 @@
+@Turnero.API_HostAddress = http://localhost:5124
+
+GET {{Turnero.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
