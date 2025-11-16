@@ -52,7 +52,7 @@ public class AuthService
             var adminUser = new User
             {
                 Username = "admin",
-                PasswordHash = HashPassword("login"),
+                PasswordHash = HashPassword("admin"),
                 Role = UserRole.Admin
             };
             _context.Users.Add(adminUser);

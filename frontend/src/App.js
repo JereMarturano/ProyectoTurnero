@@ -15,6 +15,7 @@ function App() {
     try {
       const data = await login(username, password);
       setToken(data.token);
+      console.log('Token:', data.token);
       if (username === 'admin') {
         setIsAdmin(true);
       }
@@ -32,18 +33,24 @@ function App() {
       ) : (
         <form onSubmit={handleLogin}>
           <h2>Login</h2>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <label>
+            Username
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </label>
+          <label>
+            Password
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
           <button type="submit">Login</button>
         </form>
       )}
