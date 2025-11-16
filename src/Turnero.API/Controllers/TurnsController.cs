@@ -54,6 +54,7 @@ public class TurnsController : ControllerBase
     }
 
     [HttpGet("status")]
+    [HttpGet("current")]
     public IActionResult GetCurrentTurn()
     {
         var turn = _turnService.GetCurrentTurn();

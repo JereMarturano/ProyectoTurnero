@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { callTurn, finishTurn, getCurrentTurn } from '../services/api';
 import TurnDisplay from './TurnDisplay';
 
-function AdminView({ token }) {
+function AdminView() {
   const [currentTurn, setCurrentTurn] = useState(null);
 
   const fetchCurrentTurn = async () => {
@@ -10,6 +10,7 @@ function AdminView({ token }) {
       const turn = await getCurrentTurn();
       setCurrentTurn(turn);
     } catch (error) {
+      console.error('Failed to fetch current turn:', error);
       setCurrentTurn(null);
     }
   };
@@ -20,7 +21,7 @@ function AdminView({ token }) {
 
   const handleCallTurn = async () => {
     try {
-      await callTurn(token);
+      await callTurn();
       fetchCurrentTurn();
     } catch (error) {
       // Handle error
@@ -29,7 +30,7 @@ function AdminView({ token }) {
 
   const handleFinishTurn = async () => {
     try {
-      await finishTurn(token);
+      await finishTurn();
       fetchCurrentTurn();
     } catch (error) {
       // Handle error
