@@ -18,13 +18,22 @@ builder.Services.AddScoped<TurnService>();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
+// 👇 INICIO DE LA CONFIGURACIÓN DE CORS
+// Define un nombre para la política de CORS
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("CorsPolicy",
-        builder => builder.AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader());
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy  =>
+                      {
+                          policy.WithOrigins("http://localhost:3000") // La URL de tu React
+                                .AllowAnyHeader()
+                                .AllowAnyMethod()
+                                .AllowCredentials(); // <-- MUY IMPORTANTE para SignalR
+                      });
 });
+// 👆 FIN DE LA CONFIGURACIÓN DE CORS
 
 
 builder.Services.AddAuthentication(options =>
@@ -67,9 +76,12 @@ if (app.Environment..IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
-app.UseCors("CorsPolicy");
+// 👇 INICIO DE USO DE CORS
+// !! IMPORTANTE: Llama a UseCors() ANTES de UseAuthorization()
+app.UseCors(MyAllowSpecificOrigins);
+// 👆 FIN DE USO DE CORS
 
 app.UseAuthentication();
 app.UseAuthorization();

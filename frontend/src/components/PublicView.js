@@ -5,15 +5,24 @@ import TurnDisplay from './TurnDisplay';
 
 function PublicView() {
   const [currentTurn, setCurrentTurn] = useState(null);
+  const [error, setError] = useState(null);
 
-  const fetchCurrentTurn = async () => {
-    try {
-      const turn = await getCurrentTurn();
-      setCurrentTurn(turn);
-    } catch (error) {
-      setCurrentTurn(null);
-    }
-  };
+    const fetchCurrentTurn = async () => {
+        try {
+            setError(null);
+
+            // La función 'getCurrentTurn' ya devuelve el dato (o null)
+            const turn = await getCurrentTurn();
+
+            // NO hagas esto: setCurrentTurn(turn.data);
+            // Haz esto:
+            setCurrentTurn(turn); // <-- Asigna 'turn' directamente
+
+        } catch (error) {
+            console.error("Error in fetchCurrentTurn:", error.message);
+            setError(error.message);
+        }
+    };
 
   useEffect(() => {
     startConnection();
