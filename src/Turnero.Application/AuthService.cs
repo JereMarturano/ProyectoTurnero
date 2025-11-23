@@ -58,6 +58,36 @@ public class AuthService
             _context.Users.Add(adminUser);
             _context.SaveChanges();
         }
+        
+        // Seed doctor users
+        SeedDoctorUsers();
+    }
+
+    public void SeedDoctorUsers()
+    {
+        var doctorUsernames = new[]
+        {
+            "zurita", "lopez", "favaloro", "grierson", "laureano",
+            "mistral", "favaloro2", "lanteri", "mallo", "moreau",
+            "mazza", "carrillo", "rawson", "houssay", "eyle",
+            "agote", "argerich"
+        };
+
+        foreach (var username in doctorUsernames)
+        {
+            if (!_context.Users.Any(u => u.Username == username))
+            {
+                var doctorUser = new User
+                {
+                    Username = username,
+                    PasswordHash = HashPassword(username),
+                    Role = UserRole.User
+                };
+                _context.Users.Add(doctorUser);
+            }
+        }
+        
+        _context.SaveChanges();
     }
 
     private string HashPassword(string password)

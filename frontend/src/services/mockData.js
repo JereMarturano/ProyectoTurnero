@@ -12,15 +12,6 @@ export const DOCTORS = [
         image: '/doc_male_1.png'
     },
     {
-        id: 2,
-        name: 'Dra. Dip Lourdes',
-        specialty: 'Inmunología',
-        days: [1, 2, 3, 4, 5, 6], // Mon-Sat (No Sunday)
-        hours: { start: 16, end: 21 },
-        duration: 45,
-        image: '/dra_lourdes.jpg'
-    },
-    {
         id: 3,
         name: 'Dra. Lopez',
         specialty: 'Ginecología',
