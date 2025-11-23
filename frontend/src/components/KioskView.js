@@ -6,6 +6,7 @@ import PatientForm from './Booking/PatientForm';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
+import Signature from './ui/Signature';
 
 function KioskView({ onBack }) {
     const [step, setStep] = useState('doctors'); // doctors, date, form, success
@@ -113,6 +114,7 @@ function KioskView({ onBack }) {
                     </div>
                 )}
             </main>
+            <Signature />
         </div>
     );
 }

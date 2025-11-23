@@ -1,4 +1,5 @@
 import React from 'react';
+import Signature from './ui/Signature';
 
 const Layout = ({ children, className = '' }) => {
     return (
@@ -22,6 +23,7 @@ const Layout = ({ children, className = '' }) => {
                     &copy; {new Date().getFullYear()} Sistema de Turnos. Todos los derechos reservados.
                 </div>
             </footer>
+            <Signature />
         </div>
     );
 };

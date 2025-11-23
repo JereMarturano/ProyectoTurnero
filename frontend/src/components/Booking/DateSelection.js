@@ -1,14 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { format, addDays, startOfToday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getAvailableSlots } from '../../services/mockData';
+import { getAvailableSlots, isWorkingDay } from '../../services/mockData';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 
 const DateSelection = ({ doctor, onSelectSlot, onBack }) => {
-    const [selectedDate, setSelectedDate] = useState(startOfToday());
+    const [selectedDate, setSelectedDate] = useState(null);
     const [slots, setSlots] = useState([]);
+
+    // Find first available day
+    useEffect(() => {
+        if (doctor && !selectedDate) {
+            const today = startOfToday();
+            for (let i = 0; i < 14; i++) {
+                const date = addDays(today, i);
+                if (isWorkingDay(doctor.id, date)) {
+                    setSelectedDate(date);
+                    break;
+                }
+            }
+        }
+    }, [doctor, selectedDate]);
 
     useEffect(() => {
         if (doctor && selectedDate) {
@@ -33,19 +47,27 @@ const DateSelection = ({ doctor, onSelectSlot, onBack }) => {
                     <span className="font-medium">Fechas Disponibles</span>
                 </div>
                 <div className="flex space-x-4 overflow-x-auto pb-4">
-                    {dates.map((date) => (
-                        <button
-                            key={date.toString()}
-                            onClick={() => setSelectedDate(date)}
-                            className={`flex-shrink-0 flex flex-col items-center p-3 rounded-lg border transition-colors ${format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-                                    ? 'bg-primary-600 text-white border-primary-600'
-                                    : 'bg-white text-gray-700 border-gray-200 hover:border-primary-300'
-                                }`}
-                        >
-                            <span className="text-xs uppercase">{format(date, 'EEE', { locale: es })}</span>
-                            <span className="text-lg font-bold">{format(date, 'd')}</span>
-                        </button>
-                    ))}
+                    {dates.map((date) => {
+                        const isAvailable = isWorkingDay(doctor.id, date);
+                        const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+
+                        return (
+                            <button
+                                key={date.toString()}
+                                onClick={() => isAvailable && setSelectedDate(date)}
+                                disabled={!isAvailable}
+                                className={`flex-shrink-0 flex flex-col items-center p-3 rounded-lg border transition-colors ${isSelected
+                                        ? 'bg-primary-600 text-white border-primary-600'
+                                        : isAvailable
+                                            ? 'bg-white text-gray-700 border-gray-200 hover:border-primary-300 cursor-pointer'
+                                            : 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed'
+                                    }`}
+                            >
+                                <span className="text-xs uppercase">{format(date, 'EEE', { locale: es })}</span>
+                                <span className="text-lg font-bold">{format(date, 'd')}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </Card>
 
@@ -68,7 +90,9 @@ const DateSelection = ({ doctor, onSelectSlot, onBack }) => {
                     </div>
                 ) : (
                     <div className="text-center py-8 text-gray-500">
-                        No hay turnos disponibles para esta fecha.
+                        {selectedDate
+                            ? "No hay turnos disponibles para esta fecha."
+                            : "Seleccione una fecha disponible."}
                     </div>
                 )}
             </Card>
