@@ -1,15 +1,23 @@
 import React from 'react';
 
-function TurnDisplay({ turn }) {
+function TurnDisplay({ turn, className = '' }) {
+  if (!turn) {
+    return (
+      <div className={`text-center text-gray-400 ${className}`}>
+        <p className="text-xl">Esperando...</p>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <h2>Current Turn</h2>
-      {turn ? (
-        <div>
-          <h1>{turn.number}</h1>
+    <div className={`text-center ${className}`}>
+      <div className="text-6xl font-black text-primary-600 tracking-tighter">
+        {turn.number}
+      </div>
+      {turn.status && (
+        <div className="mt-2 text-sm font-medium text-gray-500 uppercase tracking-wide">
+          {turn.status}
         </div>
-      ) : (
-        <p>No turn is currently called.</p>
       )}
     </div>
   );

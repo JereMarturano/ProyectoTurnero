@@ -54,13 +54,19 @@ public class TurnsController : ControllerBase
     }
 
     [HttpGet("status")]
+    // ... (El resto de tus métodos POST...)
+
+    [HttpGet("status")]
     public IActionResult GetCurrentTurn()
     {
+        // 1. Llama al servicio, que devuelve el turno "Llamado" o "null"
         var turn = _turnService.GetCurrentTurn();
-        if (turn == null)
-        {
-            return NotFound();
-        }
+
+        // 2. En lugar de NotFound(), ¡siempre devolvemos OK!
+        // Si el turno es null, el frontend recibirá 'null'.
+        // Si el turno existe, recibirá el objeto del turno.
         return Ok(turn);
     }
-}
+} // Fin de la clase TurnsController
+
+

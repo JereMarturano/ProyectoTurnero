@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://localhost:5001/api', // This should be your backend URL
+    baseURL: 'http://localhost:5124/api',
 });
 
 export const login = async (username, password) => {
@@ -51,6 +51,8 @@ export const finishTurn = async (token) => {
 export const getCurrentTurn = async () => {
     try {
         const response = await api.get('/turns/status');
+        console.log(`${response} response `);
+        console.log(`${response.data} response data`);
         return response.data;
     } catch (error) {
         console.error('Failed to get current turn', error);
