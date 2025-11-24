@@ -7,6 +7,8 @@ import Card from './ui/Card';
 import Button from './ui/Button';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import Signature from './ui/Signature';
+import ChatAssistant from './ChatAssistant';
+import emailjs from '@emailjs/browser';
 
 function KioskView({ onBack }) {
     const [step, setStep] = useState('doctors'); // doctors, date, form, success
@@ -27,6 +29,28 @@ function KioskView({ onBack }) {
     const handleFormSubmit = async (patientData) => {
         try {
             await bookSlot(selectedDoctor.id, selectedSlot.date, selectedSlot.time, patientData);
+
+            // Intentar enviar correo electrónico
+            try {
+                const templateParams = {
+                    to_name: patientData.name + ' ' + patientData.surname,
+                    to_email: patientData.email,
+                    doctor_name: selectedDoctor.name,
+                    date: selectedSlot.date.toLocaleDateString(),
+                    time: selectedSlot.time,
+                    clinic_name: "Clinica Marturano"
+                };
+
+                // Envío real de correo con EmailJS
+                await emailjs.send('SimulacionTurneroJ', 'template_tmqjfq5', templateParams, 'J-7wHsULyTlL0baxe');
+
+                console.log('✅ Correo de confirmación enviado exitosamente a:', patientData.email);
+
+            } catch (emailError) {
+                console.error('Error al intentar enviar el correo:', emailError);
+                // No bloqueamos el flujo si falla el correo, pero lo registramos
+            }
+
             setBookingData({ ...patientData, doctor: selectedDoctor, slot: selectedSlot });
             setStep('success');
         } catch (error) {
@@ -115,6 +139,7 @@ function KioskView({ onBack }) {
                 )}
             </main>
             <Signature />
+            <ChatAssistant />
         </div>
     );
 }
