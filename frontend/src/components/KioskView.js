@@ -35,9 +35,10 @@ function KioskView({ onBack }) {
                 const templateParams = {
                     to_name: patientData.name + ' ' + patientData.surname,
                     to_email: patientData.email,
-                    doctor_name: selectedDoctor.name,
-                    date: selectedSlot.date.toLocaleDateString(),
-                    time: selectedSlot.time,
+                    email: patientData.email,
+                    doctor: selectedDoctor.name,
+                    fecha: selectedSlot.date.toLocaleDateString(),
+                    hora: selectedSlot.time,
                     clinic_name: "Clinica Marturano"
                 };
 
