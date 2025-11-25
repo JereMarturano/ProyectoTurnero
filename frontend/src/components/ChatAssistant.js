@@ -46,6 +46,27 @@ const ChatAssistant = () => {
             return "¡Hola! ¿Buscas algún especialista en particular o tienes alguna duda sobre nuestros servicios?";
         }
 
+        // Consultas generales
+        if (lowerQuery.match(/duda|consulta|pregunta/)) {
+            return "¡Claro! Dime cuál es tu duda y trataré de ayudarte. Puedes preguntarme sobre especialidades, médicos, horarios, obras sociales o cómo sacar un turno.";
+        }
+
+        // Listado de especialidades
+        if (lowerQuery.includes('especialidad')) {
+            const specialties = [...new Set(DOCTORS.map(d => d.specialty))];
+            return `Nuestras especialidades son: ${specialties.join(', ')}. ¿Te interesa alguna en particular?`;
+        }
+
+        // Listado de médicos general
+        if (lowerQuery.includes('medico') || lowerQuery.includes('doctor')) {
+            return "Contamos con especialistas en Cardiología, Pediatría, Dermatología, Traumatología, Oftalmología, Ginecología y Medicina General. ¿Buscas alguno en especial?";
+        }
+
+        // Horarios generales
+        if (lowerQuery.includes('horario') || lowerQuery.includes('hora')) {
+            return "Nuestros médicos atienden en distintos horarios, generalmente entre las 8:00 y las 20:00. Si buscas un especialista en particular, puedo decirte sus horarios específicos.";
+        }
+
         // Especialidades
         if (lowerQuery.includes('cardiolog') || lowerQuery.includes('corazon')) {
             const cardios = DOCTORS.filter(d => d.specialty === 'Cardiología');
