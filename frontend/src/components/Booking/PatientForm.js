@@ -3,7 +3,7 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { Timer, AlertCircle } from 'lucide-react';
 
-const PatientForm = ({ onSubmit, onCancel }) => {
+const PatientForm = ({ onSubmit, onCancel, loading }) => {
     const [formData, setFormData] = useState({
         name: '',
         surname: '',
@@ -55,6 +55,7 @@ const PatientForm = ({ onSubmit, onCancel }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (loading) return;
         if (validate()) {
             onSubmit(formData);
         }
@@ -160,11 +161,11 @@ const PatientForm = ({ onSubmit, onCancel }) => {
                     </div>
 
                     <div className="flex justify-end space-x-4 pt-4 border-t">
-                        <Button type="button" variant="ghost" onClick={onCancel}>
+                        <Button type="button" variant="ghost" onClick={onCancel} disabled={loading}>
                             Cancelar
                         </Button>
-                        <Button type="submit">
-                            Confirmar Turno
+                        <Button type="submit" disabled={loading}>
+                            {loading ? 'Procesando...' : 'Confirmar Turno'}
                         </Button>
                     </div>
                 </form>

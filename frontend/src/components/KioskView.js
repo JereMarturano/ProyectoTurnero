@@ -20,6 +20,7 @@ function KioskView({ onBack }) {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         const fetchDoctors = async () => {
@@ -49,6 +50,8 @@ function KioskView({ onBack }) {
     };
 
     const handleFormSubmit = async (patientData) => {
+        if (submitting) return;
+        setSubmitting(true);
         try {
             // Prepare data for the backend
             const turnData = {
@@ -93,6 +96,8 @@ function KioskView({ onBack }) {
         } catch (error) {
             console.error('Booking failed', error);
             setError("Hubo un error al reservar el turno. Por favor, intente nuevamente.");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -101,6 +106,7 @@ function KioskView({ onBack }) {
         setSelectedDoctor(null);
         setSelectedSlot(null);
         setBookingData(null);
+        setSubmitting(false);
     };
 
     return (
@@ -163,6 +169,7 @@ function KioskView({ onBack }) {
                     <PatientForm
                         onSubmit={handleFormSubmit}
                         onCancel={() => setStep('date')}
+                        loading={submitting}
                     />
                 )}
 
