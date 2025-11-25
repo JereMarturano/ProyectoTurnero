@@ -139,7 +139,7 @@ function App() {
                 className="w-full flex justify-center"
               >
                 <Monitor className="w-4 h-4 mr-2" />
-                Modo Kiosco (Pacientes)
+                Modo pacientes
               </Button>
             </div>
           </div>

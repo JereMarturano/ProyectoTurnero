@@ -42,7 +42,7 @@ const ChatAssistant = () => {
         const lowerQuery = query.toLowerCase();
 
         // Saludos
-        if (lowerQuery.match(/hola|buen|dia|tarde|noche/)) {
+        if (lowerQuery.match(/\b(hola|buen|buenos|buenas)\b/)) {
             return "¡Hola! ¿Buscas algún especialista en particular o tienes alguna duda sobre nuestros servicios?";
         }
 
@@ -127,8 +127,8 @@ const ChatAssistant = () => {
                             >
                                 <div
                                     className={`max-w-[80%] p-3 rounded-2xl ${msg.sender === 'user'
-                                            ? 'bg-primary-600 text-white rounded-tr-none'
-                                            : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-tl-none'
+                                        ? 'bg-primary-600 text-white rounded-tr-none'
+                                        : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-tl-none'
                                         }`}
                                 >
                                     <p className="text-sm">{msg.text}</p>

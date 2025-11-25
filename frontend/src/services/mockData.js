@@ -183,6 +183,8 @@ export const getAvailableSlots = (doctorId, date) => {
     const slots = [];
     let currentTime = setMinutes(setHours(startOfDay(date), doctor.hours.start), 0);
     const endTime = setMinutes(setHours(startOfDay(date), doctor.hours.end), 0);
+    const now = new Date();
+    const isToday = format(date, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
 
     while (isBefore(currentTime, endTime)) {
         const slotTime = format(currentTime, 'HH:mm');
@@ -193,7 +195,10 @@ export const getAvailableSlots = (doctorId, date) => {
         );
 
         if (!isTaken) {
-            slots.push(slotTime);
+            // If it's today, only add slots that are in the future
+            if (!isToday || isAfter(currentTime, now)) {
+                slots.push(slotTime);
+            }
         }
 
         currentTime = addMinutes(currentTime, doctor.duration);
