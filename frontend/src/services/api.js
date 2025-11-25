@@ -72,13 +72,6 @@ export const getDoctors = async () => {
 
 export const getAvailableSlots = async (doctorId, date) => {
     try {
-        // Format date as yyyy-MM-dd for the query param if needed, or ISO string.
-        // The backend expects DateTime, so ISO string or just yyyy-MM-dd should work.
-        // Let's use ISO string but maybe just the date part if the backend ignores time or handles it.
-        // Actually, let's pass the date object or string as is, axios handles it.
-        // But to be safe and match backend expectation of just date, let's format it.
-        // However, I don't have date-fns imported here. I'll pass it as is and let the caller format or rely on axios.
-        // Better yet, let's assume the caller passes a Date object or string.
         const response = await api.get(`/doctors/${doctorId}/slots`, {
             params: { date }
         });
@@ -89,5 +82,14 @@ export const getAvailableSlots = async (doctorId, date) => {
     }
 };
 
+export const createTurn = async (turnData) => {
+    try {
+        const response = await api.post('/turns', turnData);
+        return response.data;
+    } catch (error) {
+        console.error('Failed to create turn', error);
+        throw error;
+    }
+};
 
 export default api;

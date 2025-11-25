@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Turnero.Infrastructure;
 
@@ -11,9 +12,11 @@ using Turnero.Infrastructure;
 namespace Turnero.Infrastructure.Migrations
 {
     [DbContext(typeof(TurneroDbContext))]
-    partial class TurneroDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251125170153_AddPatientsAndRelationships")]
+    partial class AddPatientsAndRelationships
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

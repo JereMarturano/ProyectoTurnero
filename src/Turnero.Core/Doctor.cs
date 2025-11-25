@@ -16,4 +16,5 @@ public class Doctor
     public string Image { get; set; } = string.Empty;
 
     public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
+    public ICollection<Turn> Turns { get; set; } = new List<Turn>();
 }

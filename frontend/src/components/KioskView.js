@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getDoctors as getDoctorsApi } from '../services/api';
-import { bookSlot } from '../services/mockData'; // Still using mock bookSlot for now as per plan? No, plan said "dejando solo bookSlot". But I should check if I can use API for booking too. The user said "dejando solo bookSlot (o migra bookSlot completamente a la API)". I'll stick to mock bookSlot for now to minimize risk unless I see an easy way. Wait, I implemented TurnService but didn't expose bookSlot in API? I implemented DoctorController but not BookingController. So I'll keep mock bookSlot or just log it.
+import { getDoctors as getDoctorsApi, createTurn as createTurnApi } from '../services/api';
+import { bookSlot } from '../services/mockData'; // Keeping mock for reference if needed, but unused now
 import DoctorSelection from './Booking/DoctorSelection';
 import DateSelection from './Booking/DateSelection';
 import PatientForm from './Booking/PatientForm';
@@ -50,7 +50,21 @@ function KioskView({ onBack }) {
 
     const handleFormSubmit = async (patientData) => {
         try {
-            await bookSlot(selectedDoctor.id, selectedSlot.date, selectedSlot.time, patientData);
+            // Prepare data for the backend
+            const turnData = {
+                doctorId: selectedDoctor.id,
+                date: selectedSlot.date, // Backend expects DateTime
+                time: selectedSlot.time,
+                patientName: patientData.name,
+                patientSurname: patientData.surname,
+                patientDni: patientData.dni,
+                patientSex: patientData.sex,
+                patientEmail: patientData.email,
+                patientPhone: patientData.phone,
+                status: 0 // Waiting
+            };
+
+            await createTurnApi(turnData);
 
             // Intentar enviar correo electrónico
             try {
@@ -78,6 +92,7 @@ function KioskView({ onBack }) {
             setStep('success');
         } catch (error) {
             console.error('Booking failed', error);
+            setError("Hubo un error al reservar el turno. Por favor, intente nuevamente.");
         }
     };
 
