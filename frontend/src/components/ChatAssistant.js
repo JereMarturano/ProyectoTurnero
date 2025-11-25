@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 import Button from './ui/Button';
-import { DOCTORS } from '../services/mockData';
+import { getDoctors } from '../services/api';
 
 const ChatAssistant = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -10,6 +10,7 @@ const ChatAssistant = () => {
     ]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [doctors, setDoctors] = useState([]);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -19,6 +20,18 @@ const ChatAssistant = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isOpen]);
+
+    useEffect(() => {
+        const fetchDoctors = async () => {
+            try {
+                const docs = await getDoctors();
+                setDoctors(docs);
+            } catch (error) {
+                console.error("Error fetching doctors for chat:", error);
+            }
+        };
+        fetchDoctors();
+    }, []);
 
     const handleSend = (e) => {
         e.preventDefault();
@@ -46,11 +59,29 @@ const ChatAssistant = () => {
             return "¡Hola! ¿Buscas algún especialista en particular o tienes alguna duda sobre nuestros servicios?";
         }
 
-<<<<<<< HEAD
-        // 1. Identificar especialidades dinámicamente
-        const specialties = [...new Set(DOCTORS.map(d => d.specialty))];
+        // Consultas generales
+        if (lowerQuery.match(/duda|consulta|pregunta/)) {
+            return "¡Claro! Dime cuál es tu duda y trataré de ayudarte. Puedes preguntarme sobre especialidades, médicos, horarios, obras sociales o cómo sacar un turno.";
+        }
 
-        // Mapa de sinónimos y palabras clave
+        // Listado de especialidades
+        if (lowerQuery.includes('especialidad')) {
+            const specialties = [...new Set(doctors.map(d => d.specialty))];
+            return `Nuestras especialidades son: ${specialties.join(', ')}. ¿Te interesa alguna en particular?`;
+        }
+
+        // Listado de médicos general
+        if (lowerQuery.includes('medico') || lowerQuery.includes('doctor')) {
+            return "Contamos con especialistas en Cardiología, Pediatría, Dermatología, Traumatología, Oftalmología, Ginecología y Medicina General. ¿Buscas alguno en especial?";
+        }
+
+        // Horarios generales
+        if (lowerQuery.includes('horario') || lowerQuery.includes('hora')) {
+            return "Nuestros médicos atienden en distintos horarios, generalmente entre las 8:00 y las 20:00. Si buscas un especialista en particular, puedo decirte sus horarios específicos.";
+        }
+
+        // Identificar especialidades dinámicamente y por keywords
+        const specialties = [...new Set(doctors.map(d => d.specialty))];
         const keywords = {
             'corazon': 'Cardiología',
             'cardio': 'Cardiología',
@@ -72,12 +103,8 @@ const ChatAssistant = () => {
             'familia': 'Medicina General'
         };
 
-        let targetSpecialty = null;
+        let targetSpecialty = specialties.find(s => lowerQuery.includes(s.toLowerCase()));
 
-        // Buscar por nombre exacto de especialidad
-        targetSpecialty = specialties.find(s => lowerQuery.includes(s.toLowerCase()));
-
-        // Si no encuentra, buscar por palabras clave
         if (!targetSpecialty) {
             for (const [key, value] of Object.entries(keywords)) {
                 if (lowerQuery.includes(key)) {
@@ -85,49 +112,30 @@ const ChatAssistant = () => {
                     break;
                 }
             }
-=======
-        // Consultas generales
-        if (lowerQuery.match(/duda|consulta|pregunta/)) {
-            return "¡Claro! Dime cuál es tu duda y trataré de ayudarte. Puedes preguntarme sobre especialidades, médicos, horarios, obras sociales o cómo sacar un turno.";
         }
 
-        // Listado de especialidades
-        if (lowerQuery.includes('especialidad')) {
-            const specialties = [...new Set(DOCTORS.map(d => d.specialty))];
-            return `Nuestras especialidades son: ${specialties.join(', ')}. ¿Te interesa alguna en particular?`;
-        }
-
-        // Listado de médicos general
-        if (lowerQuery.includes('medico') || lowerQuery.includes('doctor')) {
-            return "Contamos con especialistas en Cardiología, Pediatría, Dermatología, Traumatología, Oftalmología, Ginecología y Medicina General. ¿Buscas alguno en especial?";
-        }
-
-        // Horarios generales
-        if (lowerQuery.includes('horario') || lowerQuery.includes('hora')) {
-            return "Nuestros médicos atienden en distintos horarios, generalmente entre las 8:00 y las 20:00. Si buscas un especialista en particular, puedo decirte sus horarios específicos.";
-        }
-
-        // Especialidades
-        if (lowerQuery.includes('cardiolog') || lowerQuery.includes('corazon')) {
-            const cardios = DOCTORS.filter(d => d.specialty === 'Cardiología');
-            return `Contamos con excelentes cardiólogos: ${cardios.map(d => d.name).join(', ')}. ¿Te gustaría reservar con alguno?`;
->>>>>>> 0af6c39fd591343380301665a83f99143c2856f3
-        }
-
-        // Si encontramos una especialidad, listamos los médicos
         if (targetSpecialty) {
-            const doctors = DOCTORS.filter(d => d.specialty === targetSpecialty);
-            if (doctors.length > 0) {
-                return `Para ${targetSpecialty} contamos con: ${doctors.map(d => d.name).join(', ')}. ¿Te gustaría reservar con alguno?`;
+            const specialtyDoctors = doctors.filter(d => d.specialty === targetSpecialty);
+            if (specialtyDoctors.length > 0) {
+                return `Para ${targetSpecialty} contamos con: ${specialtyDoctors.map(d => d.name).join(', ')}. ¿Te gustaría reservar con alguno?`;
             }
         }
 
         // Doctores específicos
-        const foundDoctor = DOCTORS.find(d => lowerQuery.includes(d.name.toLowerCase().split(' ').pop().toLowerCase()));
+        const foundDoctor = doctors.find(d => lowerQuery.includes(d.name.toLowerCase().split(' ').pop().toLowerCase()));
         if (foundDoctor) {
             const daysMap = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 0: 'Domingo' };
-            const daysStr = foundDoctor.days.map(d => daysMap[d]).join(', ');
-            return `${foundDoctor.name} es especialista en ${foundDoctor.specialty}. Atiende los días ${daysStr} de ${foundDoctor.hours.start}:00 a ${foundDoctor.hours.end}:00.`;
+            // Handle schedules if available, otherwise fallback or generic
+            if (foundDoctor.schedules && foundDoctor.schedules.length > 0) {
+                const daysStr = foundDoctor.schedules.map(s => daysMap[s.dayOfWeek]).filter(Boolean).join(', ');
+                // Just showing first schedule time for simplicity or range
+                const firstSchedule = foundDoctor.schedules[0];
+                // Time is TimeSpan in backend, likely string "HH:mm:ss" in JSON.
+                // Let's assume it comes as string.
+                return `${foundDoctor.name} es especialista en ${foundDoctor.specialty}. Atiende los días ${daysStr}.`;
+            } else {
+                return `${foundDoctor.name} es especialista en ${foundDoctor.specialty}.`;
+            }
         }
 
         // Precios / Obras sociales (Simulado)

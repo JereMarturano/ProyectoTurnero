@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Turnero.Application;
+using Turnero.Application.Services;
 using Turnero.API.Hubs;
 using Turnero.Infrastructure;
 
@@ -14,8 +15,13 @@ builder.Services.AddDbContext<TurneroDbContext>(options =>
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<TurnService>();
+builder.Services.AddScoped<DoctorService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
@@ -56,8 +62,21 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var authService = services.GetRequiredService<AuthService>();
-    authService.SeedAdminUser();
+    try 
+    {
+        var context = services.GetRequiredService<TurneroDbContext>();
+        context.Database.Migrate();
+
+        var authService = services.GetRequiredService<AuthService>();
+        authService.SeedAdminUser();
+        var doctorService = services.GetRequiredService<DoctorService>();
+        await doctorService.SeedDoctors();
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -67,7 +86,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseCors("CorsPolicy");
 

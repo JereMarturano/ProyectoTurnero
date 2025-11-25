@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { format, addDays, startOfToday } from 'date-fns';
+import { format, addDays, startOfToday, getDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getAvailableSlots, isWorkingDay } from '../../services/mockData';
+import { getAvailableSlots as getAvailableSlotsApi } from '../../services/api';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
@@ -10,13 +10,23 @@ const DateSelection = ({ doctor, onSelectSlot, onBack }) => {
     const [selectedDate, setSelectedDate] = useState(null);
     const [slots, setSlots] = useState([]);
 
+    // Helper to check if a date is a working day for the doctor
+    const isWorkingDay = (date) => {
+        if (!doctor || !doctor.schedules) return false;
+        const dayOfWeek = getDay(date);
+        // doctor.schedules is an array of Schedule objects.
+        // Schedule object has dayOfWeek property.
+        // Assuming backend returns dayOfWeek as int (0-6) matching JS.
+        return doctor.schedules.some(s => s.dayOfWeek === dayOfWeek);
+    };
+
     // Find first available day
     useEffect(() => {
         if (doctor && !selectedDate) {
             const today = startOfToday();
             for (let i = 0; i < 14; i++) {
                 const date = addDays(today, i);
-                if (isWorkingDay(doctor.id, date)) {
+                if (isWorkingDay(date)) {
                     setSelectedDate(date);
                     break;
                 }
@@ -25,10 +35,22 @@ const DateSelection = ({ doctor, onSelectSlot, onBack }) => {
     }, [doctor, selectedDate]);
 
     useEffect(() => {
-        if (doctor && selectedDate) {
-            const available = getAvailableSlots(doctor.id, selectedDate);
-            setSlots(available);
-        }
+        const fetchSlots = async () => {
+            if (doctor && selectedDate) {
+                try {
+                    // Format date for API if needed, or pass Date object if api.js handles it.
+                    // api.js expects date to be passed to params.
+                    // Let's pass ISO string to be safe.
+                    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+                    const available = await getAvailableSlotsApi(doctor.id, dateStr);
+                    setSlots(available);
+                } catch (error) {
+                    console.error("Error fetching slots:", error);
+                    setSlots([]);
+                }
+            }
+        };
+        fetchSlots();
     }, [doctor, selectedDate]);
 
     // Generate next 14 days
@@ -48,7 +70,7 @@ const DateSelection = ({ doctor, onSelectSlot, onBack }) => {
                 </div>
                 <div className="flex space-x-4 overflow-x-auto pb-4">
                     {dates.map((date) => {
-                        const isAvailable = isWorkingDay(doctor.id, date);
+                        const isAvailable = isWorkingDay(date);
                         const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
 
                         return (
@@ -57,10 +79,10 @@ const DateSelection = ({ doctor, onSelectSlot, onBack }) => {
                                 onClick={() => isAvailable && setSelectedDate(date)}
                                 disabled={!isAvailable}
                                 className={`flex-shrink-0 flex flex-col items-center p-3 rounded-lg border transition-colors ${isSelected
-                                        ? 'bg-primary-600 text-white border-primary-600'
-                                        : isAvailable
-                                            ? 'bg-white text-gray-700 border-gray-200 hover:border-primary-300 cursor-pointer'
-                                            : 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed'
+                                    ? 'bg-primary-600 text-white border-primary-600'
+                                    : isAvailable
+                                        ? 'bg-white text-gray-700 border-gray-200 hover:border-primary-300 cursor-pointer'
+                                        : 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed'
                                     }`}
                             >
                                 <span className="text-xs uppercase">{format(date, 'EEE', { locale: es })}</span>

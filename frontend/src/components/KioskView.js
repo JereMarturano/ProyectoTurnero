@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { getDoctors, bookSlot } from '../services/mockData';
+import React, { useState, useEffect } from 'react';
+import { getDoctors as getDoctorsApi } from '../services/api';
+import { bookSlot } from '../services/mockData'; // Still using mock bookSlot for now as per plan? No, plan said "dejando solo bookSlot". But I should check if I can use API for booking too. The user said "dejando solo bookSlot (o migra bookSlot completamente a la API)". I'll stick to mock bookSlot for now to minimize risk unless I see an easy way. Wait, I implemented TurnService but didn't expose bookSlot in API? I implemented DoctorController but not BookingController. So I'll keep mock bookSlot or just log it.
 import DoctorSelection from './Booking/DoctorSelection';
 import DateSelection from './Booking/DateSelection';
 import PatientForm from './Booking/PatientForm';
@@ -15,6 +16,27 @@ function KioskView({ onBack }) {
     const [selectedDoctor, setSelectedDoctor] = useState(null);
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [bookingData, setBookingData] = useState(null);
+    const [doctors, setDoctors] = useState([]);
+
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchDoctors = async () => {
+            try {
+                setLoading(true);
+                const docs = await getDoctorsApi();
+                setDoctors(docs);
+                setError(null);
+            } catch (error) {
+                console.error("Error fetching doctors:", error);
+                setError("No se pudieron cargar los profesionales. Por favor, intente nuevamente.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDoctors();
+    }, []);
 
     const handleDoctorSelect = (doctor) => {
         setSelectedDoctor(doctor);
@@ -88,7 +110,30 @@ function KioskView({ onBack }) {
 
             <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {step === 'doctors' && (
-                    <DoctorSelection doctors={getDoctors()} onSelect={handleDoctorSelect} />
+                    <>
+                        {loading && (
+                            <div className="flex justify-center items-center h-64">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                            </div>
+                        )}
+
+                        {error && (
+                            <div className="text-center py-12">
+                                <p className="text-red-500 text-lg mb-4">{error}</p>
+                                <Button onClick={() => window.location.reload()}>Reintentar</Button>
+                            </div>
+                        )}
+
+                        {!loading && !error && doctors.length === 0 && (
+                            <div className="text-center py-12">
+                                <p className="text-gray-500 text-lg">No hay profesionales disponibles en este momento.</p>
+                            </div>
+                        )}
+
+                        {!loading && !error && doctors.length > 0 && (
+                            <DoctorSelection doctors={doctors} onSelect={handleDoctorSelect} />
+                        )}
+                    </>
                 )}
 
                 {step === 'date' && (
