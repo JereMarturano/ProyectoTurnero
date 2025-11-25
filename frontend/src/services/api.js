@@ -102,4 +102,14 @@ export const getTurnStats = async () => {
     }
 };
 
+export const getPatientHistory = async (dni) => {
+    try {
+        const response = await api.get(`/turns/history/${dni}`);
+        return response.data;
+    } catch (error) {
+        console.error('Failed to get patient history', error);
+        throw error;
+    }
+};
+
 export default api;

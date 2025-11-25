@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { callTurn, finishTurn, getCurrentTurn, getTurnStats } from '../services/api';
+import { callTurn, finishTurn, getCurrentTurn, getTurnStats, getPatientHistory } from '../services/api';
 import TurnDisplay from './TurnDisplay';
 import Card from './ui/Card';
 import Button from './ui/Button';
-import { Megaphone, CheckCircle, RefreshCw, LogOut } from 'lucide-react';
+import { Megaphone, CheckCircle, RefreshCw, LogOut, History, X } from 'lucide-react';
 
-function AdminView({ token }) {
+function AdminView({ token, doctorName, onLogout }) {
   const [currentTurn, setCurrentTurn] = useState(null);
   const [stats, setStats] = useState({ attended: 0, pending: 0 });
   const [loading, setLoading] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [showHistory, setShowHistory] = useState(false);
+  const [patientHistory, setPatientHistory] = useState([]);
 
   const fetchData = async () => {
     try {
@@ -26,7 +29,15 @@ function AdminView({ token }) {
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
+
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(timeInterval);
+    };
   }, []);
 
   const handleCallTurn = async () => {
@@ -53,14 +64,35 @@ function AdminView({ token }) {
     }
   };
 
+  const handleViewHistory = async () => {
+    if (!currentTurn?.patientDni) return;
+    try {
+      const history = await getPatientHistory(currentTurn.patientDni);
+      setPatientHistory(history);
+      setShowHistory(true);
+    } catch (error) {
+      console.error("Error fetching history", error);
+    }
+  };
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Panel de Administración</h1>
-          <p className="text-gray-500">Gestione los turnos desde aquí</p>
+          <h1 className="text-2xl font-bold text-gray-900">Hola, {doctorName}</h1>
+          <p className="text-gray-500 capitalize">
+            {formatDate(currentTime)} • {formatTime(currentTime)}
+          </p>
         </div>
-        <Button variant="outline" onClick={() => window.location.reload()}>
+        <Button variant="outline" onClick={onLogout}>
           <LogOut className="w-4 h-4 mr-2" />
           Salir
         </Button>
@@ -73,10 +105,18 @@ function AdminView({ token }) {
           {currentTurn ? (
             <div className="space-y-6 w-full">
               <div className="p-6 bg-blue-50 rounded-xl border border-blue-100">
-                <p className="text-sm text-blue-600 font-medium mb-1">Estás atendiendo a:</p>
-                <h3 className="text-2xl font-bold text-gray-900">
-                  {currentTurn.patientName} {currentTurn.patientSurname}
-                </h3>
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium mb-1">Estás atendiendo a:</p>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      {currentTurn.patientName} {currentTurn.patientSurname}
+                    </h3>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleViewHistory} title="Ver Historial">
+                    <History className="w-4 h-4" />
+                  </Button>
+                </div>
+
                 <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500 block">DNI</span>
@@ -155,6 +195,44 @@ function AdminView({ token }) {
           </div>
         </Card>
       </div>
+
+      {showHistory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-900">Historial del Paciente</h3>
+              <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              {patientHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {patientHistory.map((turn) => (
+                    <div key={turn.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {new Date(turn.date).toLocaleDateString()} - {new Date(turn.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Dr/a. {turn.doctor?.name || 'Desconocido'} - {turn.doctor?.specialty || 'General'}
+                        </p>
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        Finalizado
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No hay visitas anteriores registradas.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -236,4 +236,13 @@ public class TurnsController : ControllerBase
 
         return new { attended, pending };
     }
+    [HttpGet("history/{dni}")]
+    public async Task<ActionResult<IEnumerable<Turn>>> GetPatientHistory(string dni)
+    {
+        return await _context.Turns
+            .Include(t => t.Doctor)
+            .Where(t => t.PatientDni == dni && t.Status == TurnStatus.Finished)
+            .OrderByDescending(t => t.Date)
+            .ToListAsync();
+    }
 }

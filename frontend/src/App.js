@@ -11,10 +11,11 @@ import { User, Lock, LogIn, Monitor } from 'lucide-react';
 function App() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [token, setToken] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [isAdmin, setIsAdmin] = useState(!!localStorage.getItem('token'));
   const [error, setError] = useState('');
   const [showKiosk, setShowKiosk] = useState(false);
+  const [doctorName, setDoctorName] = useState(localStorage.getItem('doctorName') || '');
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -22,11 +23,30 @@ function App() {
     try {
       const data = await login(username, password);
       setToken(data.token);
-      // Allow any logged-in user to access the Admin/Doctor panel
+      localStorage.setItem('token', data.token);
+
+      // Simulating getting doctor name from login (in a real app, backend should return it)
+      // For now, we'll format the username or use a default if it's admin
+      let name = username;
+      if (username.toLowerCase() === 'cecilia') name = 'Dra. Cecilia Grierson';
+      else if (username.toLowerCase() === 'admin') name = 'Administrador';
+      else name = `Dr/a. ${username.charAt(0).toUpperCase() + username.slice(1)}`;
+
+      setDoctorName(name);
+      localStorage.setItem('doctorName', name);
+
       setIsAdmin(true);
     } catch (error) {
       setError('Credenciales inválidas. Por favor intente nuevamente.');
     }
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setIsAdmin(false);
+    localStorage.removeItem('token');
+    localStorage.removeItem('doctorName');
+    window.location.reload();
   };
 
   if (showKiosk) {
@@ -36,7 +56,7 @@ function App() {
   if (token) {
     return (
       <Layout>
-        {isAdmin ? <AdminView token={token} /> : <PublicView />}
+        {isAdmin ? <AdminView token={token} doctorName={doctorName} onLogout={handleLogout} /> : <PublicView />}
       </Layout>
     );
   }
