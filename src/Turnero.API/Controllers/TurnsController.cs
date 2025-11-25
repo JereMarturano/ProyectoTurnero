@@ -79,7 +79,17 @@ public class TurnsController : ControllerBase
             }
         }
 
-        turn.Timestamp = DateTime.UtcNow;
+        turn.Timestamp = DateTime.Now; // Use local server time
+        
+        if (turn.Date.HasValue && !string.IsNullOrEmpty(turn.Time))
+        {
+            // Combine Date and Time so the Date column shows the correct appointment time
+            if (TimeSpan.TryParse(turn.Time, out var timeSpan))
+            {
+                turn.Date = turn.Date.Value.Date.Add(timeSpan);
+            }
+        }
+        
         if (turn.Status == 0) turn.Status = TurnStatus.Waiting; // Default to Waiting
 
         _context.Turns.Add(turn);

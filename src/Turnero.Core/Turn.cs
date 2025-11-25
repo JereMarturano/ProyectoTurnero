@@ -17,6 +17,8 @@ public class Turn
 
     public DateTime? Date { get; set; }
     public string? Time { get; set; }
+    
+    // Grouped Patient Info
     public string? PatientName { get; set; }
     public string? PatientSurname { get; set; }
     public string? PatientDni { get; set; }
