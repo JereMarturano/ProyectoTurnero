@@ -46,26 +46,52 @@ const ChatAssistant = () => {
             return "¡Hola! ¿Buscas algún especialista en particular o tienes alguna duda sobre nuestros servicios?";
         }
 
-        // Especialidades
-        if (lowerQuery.includes('cardiolog') || lowerQuery.includes('corazon')) {
-            const cardios = DOCTORS.filter(d => d.specialty === 'Cardiología');
-            return `Contamos con excelentes cardiólogos: ${cardios.map(d => d.name).join(', ')}. ¿Te gustaría reservar con alguno?`;
+        // 1. Identificar especialidades dinámicamente
+        const specialties = [...new Set(DOCTORS.map(d => d.specialty))];
+
+        // Mapa de sinónimos y palabras clave
+        const keywords = {
+            'corazon': 'Cardiología',
+            'cardio': 'Cardiología',
+            'niño': 'Pediatría',
+            'bebe': 'Pediatría',
+            'pedia': 'Pediatría',
+            'piel': 'Dermatología',
+            'derma': 'Dermatología',
+            'hueso': 'Traumatología',
+            'golpe': 'Traumatología',
+            'trauma': 'Traumatología',
+            'ojo': 'Oftalmología',
+            'vista': 'Oftalmología',
+            'oftalmo': 'Oftalmología',
+            'mujer': 'Ginecología',
+            'gineco': 'Ginecología',
+            'clinico': 'Medicina General',
+            'general': 'Medicina General',
+            'familia': 'Medicina General'
+        };
+
+        let targetSpecialty = null;
+
+        // Buscar por nombre exacto de especialidad
+        targetSpecialty = specialties.find(s => lowerQuery.includes(s.toLowerCase()));
+
+        // Si no encuentra, buscar por palabras clave
+        if (!targetSpecialty) {
+            for (const [key, value] of Object.entries(keywords)) {
+                if (lowerQuery.includes(key)) {
+                    targetSpecialty = value;
+                    break;
+                }
+            }
         }
-        if (lowerQuery.includes('pediatra') || lowerQuery.includes('niño') || lowerQuery.includes('bebe')) {
-            const peds = DOCTORS.filter(d => d.specialty === 'Pediatría');
-            return `Para los más pequeños tenemos a: ${peds.map(d => d.name).join(', ')}.`;
-        }
-        if (lowerQuery.includes('dermatolog') || lowerQuery.includes('piel')) {
-            const derms = DOCTORS.filter(d => d.specialty === 'Dermatología');
-            return `Nuestros especialistas en piel son: ${derms.map(d => d.name).join(', ')}.`;
-        }
-        if (lowerQuery.includes('traumatolog') || lowerQuery.includes('hueso') || lowerQuery.includes('golpe')) {
-            const traums = DOCTORS.filter(d => d.specialty === 'Traumatología');
-            return `En traumatología atienden: ${traums.map(d => d.name).join(', ')}.`;
-        }
-        if (lowerQuery.includes('oftalmolog') || lowerQuery.includes('ojo') || lowerQuery.includes('vista')) {
-            const oftal = DOCTORS.filter(d => d.specialty === 'Oftalmología');
-            return `Para cuidar tu visión tenemos a: ${oftal.map(d => d.name).join(', ')}.`;
+
+        // Si encontramos una especialidad, listamos los médicos
+        if (targetSpecialty) {
+            const doctors = DOCTORS.filter(d => d.specialty === targetSpecialty);
+            if (doctors.length > 0) {
+                return `Para ${targetSpecialty} contamos con: ${doctors.map(d => d.name).join(', ')}. ¿Te gustaría reservar con alguno?`;
+            }
         }
 
         // Doctores específicos
