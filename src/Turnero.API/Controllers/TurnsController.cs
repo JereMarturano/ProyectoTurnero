@@ -146,4 +146,94 @@ public class TurnsController : ControllerBase
     {
         return _context.Turns.Any(e => e.Id == id);
     }
+
+    [HttpPost("call")]
+    public async Task<ActionResult<Turn>> CallNextTurn()
+    {
+        // Logic: Find the oldest 'Waiting' turn for today.
+        var today = DateTime.Now.Date;
+        var nextTurn = await _context.Turns
+            .Include(t => t.Patient)
+            .Include(t => t.Doctor)
+            .Where(t => t.Status == TurnStatus.Waiting && t.Date.HasValue && t.Date.Value.Date == today)
+            .OrderBy(t => t.Date) // Order by appointment time
+            .FirstOrDefaultAsync();
+
+        if (nextTurn == null)
+        {
+            return NotFound("No hay turnos en espera para hoy.");
+        }
+
+        nextTurn.Status = TurnStatus.Called;
+        await _context.SaveChangesAsync();
+
+        return nextTurn;
+    }
+
+    [HttpPost("finish")]
+    public async Task<ActionResult<Turn>> FinishTurn()
+    {
+        // Find the turn that is currently 'Called'.
+        var currentTurn = await _context.Turns
+            .Where(t => t.Status == TurnStatus.Called)
+            .OrderByDescending(t => t.Date)
+            .FirstOrDefaultAsync();
+
+        if (currentTurn == null)
+        {
+            return NotFound("No hay turnos en atención.");
+        }
+
+        currentTurn.Status = TurnStatus.Finished;
+        await _context.SaveChangesAsync();
+
+        return currentTurn;
+    }
+
+    [HttpGet("status")]
+    public async Task<ActionResult<Turn>> GetCurrentStatus()
+    {
+        // Return the turn currently being called.
+        var currentTurn = await _context.Turns
+            .Include(t => t.Patient)
+            .Include(t => t.Doctor)
+            .Where(t => t.Status == TurnStatus.Called)
+            .OrderByDescending(t => t.Date)
+            .FirstOrDefaultAsync();
+
+        if (currentTurn == null)
+        {
+            return NoContent();
+        }
+
+        return currentTurn;
+    }
+    
+    [HttpPost("next")]
+    public async Task<ActionResult<Turn>> GetNextTurnInfo()
+    {
+         var today = DateTime.Now.Date;
+         var nextTurn = await _context.Turns
+            .Include(t => t.Patient)
+            .Include(t => t.Doctor)
+            .Where(t => t.Status == TurnStatus.Waiting && t.Date.HasValue && t.Date.Value.Date == today)
+            .OrderBy(t => t.Date)
+            .FirstOrDefaultAsync();
+            
+         if (nextTurn == null) return NoContent();
+         return nextTurn;
+    }
+    [HttpGet("stats")]
+    public async Task<ActionResult<object>> GetDailyStats()
+    {
+        var today = DateTime.Now.Date;
+        
+        var attended = await _context.Turns
+            .CountAsync(t => t.Status == TurnStatus.Finished && t.Date.HasValue && t.Date.Value.Date == today);
+            
+        var pending = await _context.Turns
+            .CountAsync(t => t.Status == TurnStatus.Waiting && t.Date.HasValue && t.Date.Value.Date == today);
+
+        return new { attended, pending };
+    }
 }

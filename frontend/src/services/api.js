@@ -92,4 +92,14 @@ export const createTurn = async (turnData) => {
     }
 };
 
+export const getTurnStats = async () => {
+    try {
+        const response = await api.get('/turns/stats');
+        return response.data;
+    } catch (error) {
+        console.error('Failed to get turn stats', error);
+        throw error;
+    }
+};
+
 export default api;

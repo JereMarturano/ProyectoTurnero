@@ -22,9 +22,8 @@ function App() {
     try {
       const data = await login(username, password);
       setToken(data.token);
-      if (username === 'admin') {
-        setIsAdmin(true);
-      }
+      // Allow any logged-in user to access the Admin/Doctor panel
+      setIsAdmin(true);
     } catch (error) {
       setError('Credenciales inválidas. Por favor intente nuevamente.');
     }
