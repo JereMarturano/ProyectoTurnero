@@ -9,9 +9,13 @@ public class Patient
     public int Id { get; set; }
     
     [Required(ErrorMessage = "El nombre es obligatorio")]
+    [MinLength(3, ErrorMessage = "El nombre debe tener al menos 3 caracteres")]
+    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El nombre solo puede contener letras")]
     public string Name { get; set; } = string.Empty;
     
     [Required(ErrorMessage = "El apellido es obligatorio")]
+    [MinLength(3, ErrorMessage = "El apellido debe tener al menos 3 caracteres")]
+    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El apellido solo puede contener letras")]
     public string Surname { get; set; } = string.Empty;
     
     [Required(ErrorMessage = "El DNI es obligatorio")]

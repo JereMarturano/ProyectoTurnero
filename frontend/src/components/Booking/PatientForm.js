@@ -38,11 +38,21 @@ const PatientForm = ({ onSubmit, onCancel, loading }) => {
 
     const validate = () => {
         const newErrors = {};
-        if (!formData.name) newErrors.name = 'El nombre es obligatorio';
-        else if (/\d/.test(formData.name)) newErrors.name = 'El nombre no debe contener números';
+        if (!formData.name) {
+            newErrors.name = 'El nombre es obligatorio';
+        } else if (formData.name.trim().length < 3) {
+            newErrors.name = 'El nombre debe tener al menos 3 caracteres';
+        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(formData.name)) {
+            newErrors.name = 'El nombre solo puede contener letras';
+        }
 
-        if (!formData.surname) newErrors.surname = 'El apellido es obligatorio';
-        else if (/\d/.test(formData.surname)) newErrors.surname = 'El apellido no debe contener números';
+        if (!formData.surname) {
+            newErrors.surname = 'El apellido es obligatorio';
+        } else if (formData.surname.trim().length < 3) {
+            newErrors.surname = 'El apellido debe tener al menos 3 caracteres';
+        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(formData.surname)) {
+            newErrors.surname = 'El apellido solo puede contener letras';
+        }
 
         if (!formData.dni) newErrors.dni = 'El DNI es obligatorio';
         else if (!/^\d{7,8}$/.test(formData.dni)) newErrors.dni = 'El DNI debe tener 7 u 8 dígitos numéricos';

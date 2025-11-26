@@ -25,7 +25,12 @@ public class Turn
     public string? Time { get; set; }
     
     // Grouped Patient Info
+    [MinLength(3, ErrorMessage = "El nombre debe tener al menos 3 caracteres")]
+    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El nombre solo puede contener letras")]
     public string? PatientName { get; set; }
+
+    [MinLength(3, ErrorMessage = "El apellido debe tener al menos 3 caracteres")]
+    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El apellido solo puede contener letras")]
     public string? PatientSurname { get; set; }
     
     [Required(ErrorMessage = "El DNI del paciente es obligatorio")]
