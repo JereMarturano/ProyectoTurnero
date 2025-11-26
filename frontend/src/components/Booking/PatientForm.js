@@ -39,15 +39,24 @@ const PatientForm = ({ onSubmit, onCancel, loading }) => {
     const validate = () => {
         const newErrors = {};
         if (!formData.name) newErrors.name = 'El nombre es obligatorio';
+        else if (/\d/.test(formData.name)) newErrors.name = 'El nombre no debe contener números';
+
         if (!formData.surname) newErrors.surname = 'El apellido es obligatorio';
+        else if (/\d/.test(formData.surname)) newErrors.surname = 'El apellido no debe contener números';
+
         if (!formData.dni) newErrors.dni = 'El DNI es obligatorio';
+        else if (!/^\d{7,8}$/.test(formData.dni)) newErrors.dni = 'El DNI debe tener 7 u 8 dígitos numéricos';
+
         if (!formData.sex) newErrors.sex = 'El sexo es obligatorio';
+
         if (!formData.email) {
             newErrors.email = 'El email es obligatorio';
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
             newErrors.email = 'Email inválido';
         }
+
         if (!formData.phone) newErrors.phone = 'El teléfono es obligatorio';
+        else if (!/^\d{8,15}$/.test(formData.phone)) newErrors.phone = 'El teléfono debe tener entre 8 y 15 dígitos numéricos';
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;

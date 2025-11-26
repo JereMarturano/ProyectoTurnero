@@ -44,6 +44,49 @@ public class TurnsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Turn>> CreateTurn(Turn turn)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // Validate Doctor exists
+        var doctor = await _context.Doctors.FindAsync(turn.DoctorId);
+        if (doctor == null)
+        {
+            return BadRequest("El médico especificado no existe.");
+        }
+
+        // Validate Date and Time
+        if (!turn.Date.HasValue || string.IsNullOrEmpty(turn.Time))
+        {
+             return BadRequest("Fecha y hora son obligatorias.");
+        }
+
+        if (TimeSpan.TryParse(turn.Time, out var timeSpan))
+        {
+            var appointmentDate = turn.Date.Value.Date.Add(timeSpan);
+            if (appointmentDate < DateTime.Now)
+            {
+                return BadRequest("No se puede reservar un turno en el pasado.");
+            }
+            turn.Date = appointmentDate;
+        }
+        else
+        {
+             return BadRequest("Formato de hora inválido.");
+        }
+
+        // Check for overlapping appointments
+        var isBooked = await _context.Turns.AnyAsync(t => 
+            t.DoctorId == turn.DoctorId && 
+            t.Date == turn.Date
+        );
+
+        if (isBooked)
+        {
+            return Conflict("El médico ya tiene un turno asignado en ese horario.");
+        }
+
         // 1. Handle Patient Logic
         if (!string.IsNullOrEmpty(turn.PatientDni))
         {
@@ -73,22 +116,11 @@ public class TurnsController : ControllerBase
                     Email = turn.PatientEmail,
                     Phone = turn.PatientPhone
                 };
-                // We don't need to add it explicitly if we set turn.Patient = newPatient, EF tracks it.
-                // But adding it explicitly is fine too.
                 turn.Patient = newPatient;
             }
         }
 
         turn.Timestamp = DateTime.Now; // Use local server time
-        
-        if (turn.Date.HasValue && !string.IsNullOrEmpty(turn.Time))
-        {
-            // Combine Date and Time so the Date column shows the correct appointment time
-            if (TimeSpan.TryParse(turn.Time, out var timeSpan))
-            {
-                turn.Date = turn.Date.Value.Date.Add(timeSpan);
-            }
-        }
         
         if (turn.Status == 0) turn.Status = TurnStatus.Waiting; // Default to Waiting
 
@@ -104,6 +136,11 @@ public class TurnsController : ControllerBase
         if (id != turn.Id)
         {
             return BadRequest();
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
         }
 
         _context.Entry(turn).State = EntityState.Modified;
