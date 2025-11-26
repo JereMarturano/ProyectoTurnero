@@ -24,6 +24,8 @@ public class DoctorService
 
     public async Task<List<string>> GetAvailableSlots(int doctorId, DateTime date)
     {
+        if (date.Date < DateTime.Now.Date) return new List<string>();
+
         var doctor = await _context.Doctors
             .Include(d => d.Schedules)
             .FirstOrDefaultAsync(d => d.Id == doctorId);
