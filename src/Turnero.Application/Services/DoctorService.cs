@@ -1,8 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Turnero.Core;
 using Turnero.Infrastructure;
 
@@ -13,7 +14,7 @@ namespace Turnero.Application.Services;
 /// </summary>
 public class DoctorService
 {
-    private readonly TurneroDbContext _context;
+    private readonly TurneroDbContext _context; 
 
     // Constructor: Inyección de dependencia del contexto de la base de datos
     public DoctorService(TurneroDbContext context)
@@ -30,7 +31,38 @@ public class DoctorService
         // y traer los datos relacionados en una sola consulta.
         return await _context.Doctors.Include(d => d.Schedules).ToListAsync();
     }
+    public Schedule ScheduleValidationForDoctor(int doctorId, DateTime date)
+    {
+        // 1. Validación: Si la fecha es pasada (ayer o antes), no hay turnos disponibles.
+        if (date.Date < DateTime.Now.Date) throw new Exception("La fecha ya ha pasado, ingrese una fecha valida");
+        // 2. Obtener el doctor y sus horarios configurados de la base de datos.
+        Doctor selectedDoctor = _context.Doctors
+            .Include(d => d.Schedules) // Importante: Incluir la relación de horarios
+            .FirstOrDefault(d => d.Id == doctorId);
+        // Si el doctor no existe, devolvemos lista vacía.
+        if (selectedDoctor == null) throw new Exception("El doctor no existe");
+        // 3. Determinar qué configuración de horario aplica para el día de la semana solicitado (Lunes, Martes, etc).
+        Schedule schedule = selectedDoctor.Schedules.FirstOrDefault(s => s.DayOfWeek == date.DayOfWeek);
 
+        // Si el doctor no trabaja ese día de la semana, devolvemos lista vacía.
+        if (schedule == null) throw new Exception("El doctor no trabaja ese dia de la semana");
+        return schedule;
+    }
+
+    // Obtiene la lista de turnos ya agendados
+    public List<string> GetTakenTurns(int doctorId, DateTime date)
+    {
+        List<string> takenTurns = _context.Turns
+            .Where(
+                    t => t.DoctorId == doctorId // Donde la id Coincida
+                    && t.Date.HasValue // Donde date tenga un valor
+                    && t.Date.Value.Date == date.Date // Donde el valor de DATE sea una fecha
+                    && t.Time != null // y que el tiempo no sea null
+                   )
+            .Select(t => t.Time!) // Seleccionamos los que tengan un horario asignado NO NULLO
+            .ToList(); // Transformamos a lista
+        return takenTurns;
+    }
     /// <summary>
     /// Calcula los bloques de horarios disponibles (slots) para un doctor en una fecha específica.
     /// </summary>
@@ -39,46 +71,27 @@ public class DoctorService
     /// <returns>Lista de strings con los horarios disponibles (ej: "10:00", "10:30").</returns>
     public async Task<List<string>> GetAvailableSlots(int doctorId, DateTime date)
     {
-        // 1. Validación: Si la fecha es pasada (ayer o antes), no hay turnos disponibles.
-        if (date.Date < DateTime.Now.Date) return new List<string>();
 
-        // 2. Obtener el doctor y sus horarios configurados de la base de datos.
-        var doctor = await _context.Doctors
-            .Include(d => d.Schedules) // Importante: Incluir la relación de horarios
-            .FirstOrDefaultAsync(d => d.Id == doctorId);
-
-        // Si el doctor no existe, devolvemos lista vacía.
-        if (doctor == null) return new List<string>();
-
-        // 3. Determinar qué configuración de horario aplica para el día de la semana solicitado (Lunes, Martes, etc).
-        var dayOfWeek = date.DayOfWeek;
-        var schedule = doctor.Schedules.FirstOrDefault(s => s.DayOfWeek == dayOfWeek);
-
-        // Si el doctor no trabaja ese día de la semana, devolvemos lista vacía.
-        if (schedule == null) return new List<string>();
-
-        // 4. Preparación de variables para el cálculo de intervalos.
-        var slots = new List<string>();
+        Schedule doctorSchedule = ScheduleValidationForDoctor(doctorId, date);
+        // 1. Preparación de variables para el cálculo de intervalos.
+        List<string> slots = new List<string>();
 
         // Convertimos la hora de inicio y fin configurada en el Schedule a objetos DateTime completos para el día solicitado.
-        var currentTime = date.Date.Add(schedule.StartTime);
-        var endTime = date.Date.Add(schedule.EndTime);
+        DateTime currentTime = date.Date.Add(doctorSchedule.StartTime);
+        DateTime endTime = date.Date.Add(doctorSchedule.EndTime);
 
-        var now = DateTime.Now;
-        var isToday = date.Date == now.Date; // Bandera para saber si estamos consultando el día actual.
+        DateTime now = DateTime.Now;
+        bool isToday = date.Date == now.Date; // Bandera para saber si estamos consultando el día actual.
 
-        // 5. Obtener los turnos YA ocupados en base de datos para ese doctor y esa fecha.
+        // 2. Obtener los turnos YA ocupados en base de datos para ese doctor y esa fecha.
         // Esto evita ofrecer un turno que ya fue reservado.
-        var takenTurns = await _context.Turns
-            .Where(t => t.DoctorId == doctorId && t.Date.HasValue && t.Date.Value.Date == date.Date)
-            .Select(t => t.Time) // Asumimos que t.Time guarda el string "HH:mm"
-            .ToListAsync();
+        List<string> takenTurns = GetTakenTurns(doctorId, date);
 
-        // 6. Bucle principal: Generar los slots de tiempo.
+        // 3. Bucle principal: Generar los slots de tiempo.
         // Mientras la hora actual del bucle sea menor a la hora de fin de jornada...
         while (currentTime < endTime)
         {
-            var slotTime = currentTime.ToString("HH:mm");
+            string slotTime = currentTime.ToString("HH:mm");
 
             // Verificamos si este horario específico ya está en la lista de turnos ocupados.
             bool isTaken = takenTurns.Contains(slotTime);
@@ -95,10 +108,27 @@ public class DoctorService
             }
 
             // Avanzamos el reloj según la duración configurada del turno (ej: 15, 30, 45 mins).
-            currentTime = currentTime.AddMinutes(schedule.DurationMinutes);
+            currentTime = currentTime.AddMinutes(doctorSchedule.DurationMinutes);
         }
 
         return slots;
+    }
+    /// <summary>
+    /// Método auxiliar privado para simplificar la creación de objetos Schedule y agregarlos a la lista.
+    /// </summary>
+    private void AddSchedule(List<Schedule> schedules, Doctor doctor, DayOfWeek[] days, int startHour, int endHour, int duration)
+    {
+        foreach (var day in days)
+        {
+            schedules.Add(new Schedule
+            {
+                DoctorId = doctor.Id,
+                DayOfWeek = day,
+                StartTime = new TimeSpan(startHour, 0, 0), // Hora exacta (ej: 10:00:00)
+                EndTime = new TimeSpan(endHour, 0, 0),
+                DurationMinutes = duration
+            });
+        }
     }
 
     /// <summary>
@@ -183,21 +213,5 @@ public class DoctorService
         await _context.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Método auxiliar privado para simplificar la creación de objetos Schedule y agregarlos a la lista.
-    /// </summary>
-    private void AddSchedule(List<Schedule> schedules, Doctor doctor, DayOfWeek[] days, int startHour, int endHour, int duration)
-    {
-        foreach (var day in days)
-        {
-            schedules.Add(new Schedule
-            {
-                DoctorId = doctor.Id,
-                DayOfWeek = day,
-                StartTime = new TimeSpan(startHour, 0, 0), // Hora exacta (ej: 10:00:00)
-                EndTime = new TimeSpan(endHour, 0, 0),
-                DurationMinutes = duration
-            });
-        }
-    }
+
 }
