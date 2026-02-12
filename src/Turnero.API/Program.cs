@@ -1,137 +1,145 @@
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Turnero.Application;
-using Turnero.Application.Services;
 using Turnero.API.Hubs;
 using Turnero.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Text.Json.Serialization;
+using Turnero.Application; 
+using Turnero.Application.Services; // Para DoctorService
 
-// 1. CREACI”N DEL BUILDER
-// Inicializa la aplicaciÛn web y carga la configuraciÛn (appsettings.json, variables de entorno, etc.)
+// 1. CREACI√ìN DEL BUILDER
+// Inicializa la aplicaci√≥n web y carga la configuraci√≥n (appsettings.json, variables de entorno, etc.)
 var builder = WebApplication.CreateBuilder(args);
 
-// --- ZONA DE INYECCI”N DE DEPENDENCIAS (DI) ---
-// AquÌ registramos todas las clases que nuestra app necesita para funcionar.
+// --- ZONA DE INYECCI√ìN DE DEPENDENCIAS (DI) ---
+// Aqu√≠ registramos todas las clases que nuestra app necesita para funcionar.
 
-// ConfiguraciÛn de Entity Framework Core con SQL Server
+// --- CONFIGURACI√ìN DE LA BASE DE DATOS (EF Core) ---
+// Ac√° le decimos a la aplicaci√≥n que use SQL Server.
+// IMPORTANTE: Ya no harcodeamos la Connection String ac√° por seguridad (el profe nos mata si ve passwords en el c√≥digo).
+// Ahora la tomamos de la configuraci√≥n (appsettings.json o User Secrets en desarrollo).
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Validamos que exista la cadena de conexi√≥n, si no, que explote con un mensaje claro para no perder tiempo debuggeando.
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("¬°ERROR CR√çTICO! No se encontr√≥ la cadena de conexi√≥n 'DefaultConnection'. Aseg√∫rate de haber configurado los User Secrets o el appsettings.json correctamente.");
+}
+
 builder.Services.AddDbContext<TurneroDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
 
-// Registro de Servicios Propios (LÛgica de Negocio)
-// AddScoped: Se crea una instancia nueva por cada peticiÛn HTTP. Es lo est·ndar para servicios que usan DB.
+// --- REGISTRO DE SERVICIOS PROPIOS (L√≥gica de Negocio) ---
+// Usamos AddScoped porque queremos que se cree una instancia nueva por cada petici√≥n HTTP.
+// Es lo est√°ndar para servicios que interact√∫an con la base de datos (DbContext tambi√©n es Scoped).
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<TurnService>();
 builder.Services.AddScoped<DoctorService>();
 
-// ConfiguraciÛn de Controladores y JSON
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        // IMPORTANTE: ReferenceHandler.IgnoreCycles
-        // Evita el error de "Referencia Circular" cuando serializamos objetos relacionados.
-        // Ejemplo: Doctor tiene Turnos -> Turno tiene Doctor -> Doctor tiene Turnos... (bucle infinito).
-        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-    });
-
-// Agregamos SignalR (para la funcionalidad en tiempo real de la pantalla de turnos)
-builder.Services.AddSignalR();
-
-// ConfiguraciÛn de CORS (Cross-Origin Resource Sharing)
-// Permite que el navegador acepte peticiones desde un dominio/puerto distinto al de la API.
-// Vital para que tu Frontend (ej: React en puerto 3000) hable con el Backend (puerto 5000).
+// --- CONFIGURACI√ìN DE CORs ---
+// Esto es vital para que el frontend (React/Next.js en otro puerto/dominio) pueda hablar con este backend.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy",
         builder => builder
-            .AllowAnyOrigin()  // Permite cualquier origen (Cuidado en producciÛn)
-            .AllowAnyMethod()  // GET, POST, PUT, DELETE...
+            .AllowAnyOrigin()  // OJO: En producci√≥n esto deber√≠a ser m√°s restrictivo por seguridad.
+            .AllowAnyMethod()  // GET, POST, PUT, DELETE, etc.
             .AllowAnyHeader());
 });
 
-// ConfiguraciÛn de AutenticaciÛn con JWT (JSON Web Token)
+// --- CONFIGURACI√ìN DE AUTENTICACI√ìN (JWT) ---
+// Configuraci√≥n para usar JSON Web Tokens (JWT) para loguearnos de forma segura.
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+// Otra validaci√≥n para no volvernos locos si el token falla por esto.
+if (string.IsNullOrEmpty(jwtKey))
+{
+    throw new InvalidOperationException("¬°ERROR CR√çTICO! No se encontr√≥ la clave secreta 'Jwt:Key'. Configurala en los User Secrets para que ande el login.");
+}
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-    .AddJwtBearer(options =>
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        // Definimos las reglas para validar que un token sea legÌtimo
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,             // øQuiÈn emitiÛ el token? (Tu API)
-            ValidateAudience = true,           // øPara quiÈn es el token?
-            ValidateLifetime = true,           // øEl token sigue vigente o expirÛ?
-            ValidateIssuerSigningKey = true,   // øLa firma coincide con nuestra clave secreta?
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        // Usamos la clave que recuperamos de forma segura de la configuraci√≥n
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
 
-            // Leemos los valores secretos desde appsettings.json
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
-        };
+// Configuraci√≥n de Controladores y JSON
+// Ignoramos ciclos en JSON para que no explote si tenemos referencias circulares (A tiene B, B tiene A).
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 
-// ConfiguraciÛn de Swagger (DocumentaciÛn autom·tica de la API)
+// Agregamos SignalR (para la funcionalidad en tiempo real, tipo chat o notificaciones)
+builder.Services.AddSignalR();
+
+// Configuraci√≥n de Swagger (Documentaci√≥n autom√°tica de la API)
+// Esto genera una web donde podemos ver y probar los endpoints.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// --- FIN DE LA CONFIGURACI”N DE SERVICIOS ---
-
-// Construimos la aplicaciÛn
+// --- CONSTRUCCI√ìN DE LA APP ---
 var app = builder.Build();
 
-// --- BLOQUE DE SEEDING (InicializaciÛn de Datos) ---
-// Este bloque se ejecuta al arrancar la app.
-// Verifica si la base de datos existe, aplica migraciones pendientes y crea datos iniciales.
+// --- 2. PIPELINE DE MIDDLEWARE (C√≥mo se procesan las peticiones) ---
+
+// Seeding de datos (Inicializaci√≥n de la Base de Datos)
+// Esto se ejecuta CADA VEZ que arranca la app para asegurar que la DB est√© al d√≠a y tenga el usuario admin.
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<TurneroDbContext>();
-        context.Database.Migrate(); // Aplica 'Update-Database' autom·ticamente al iniciar
+        context.Database.Migrate(); // Aplica migrations pendientes (como 'Update-Database' pero autom√°tico)
 
-        // Creamos el usuario Admin si no existe
         var authService = services.GetRequiredService<AuthService>();
-        authService.SeedAdminUser();
+        authService.SeedAdminUser(); // Crea al admin si no existe
 
-        // Creamos los Doctores y Horarios iniciales
-        var doctorService = services.GetRequiredService<DoctorService>();
-        await doctorService.SeedDoctors();
+        // Si hubiera m√°s seeders, ir√≠an ac√°
+        // var doctorService = services.GetRequiredService<DoctorService>();
+        // doctorService.Seed...
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "OcurriÛ un error al sembrar (seeding) la base de datos.");
+        logger.LogError(ex, "Ocurri√≥ un error al sembrar (seeding) la base de datos.");
     }
 }
 
-// --- PIPELINE DE PETICIONES HTTP (Middleware) ---
-// AquÌ definimos el orden en que se procesan las peticiones que llegan.
-
-// Si estamos en desarrollo, mostramos la interfaz visual de Swagger
+// Swagger en desarrollo
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// app.UseHttpsRedirection(); // RedirecciÛn a HTTPS (comentado por ahora)
+// app.UseHttpsRedirection(); // Comentado por ahora para evitar lios con certificados locales
 
-// Aplicamos la polÌtica de CORS definida arriba (debe ir antes de Auth)
 app.UseCors("CorsPolicy");
 
-// Activamos la autenticaciÛn (øQuiÈn eres?) y autorizaciÛn (øQuÈ puedes hacer?)
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Mapeamos los controladores (Endpoints de la API)
 app.MapControllers();
-
-// Mapeamos el Hub de SignalR a la ruta "/turnhub"
-// El frontend se conectar· a: http://localhost:xxxx/turnhub
+// Mapeamos el Hub de SignalR
 app.MapHub<TurnHub>("/turnhub");
 
-// Ejecutamos la aplicaciÛn
+// ¬°A correr!
 app.Run();
